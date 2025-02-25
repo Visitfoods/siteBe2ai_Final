@@ -1,122 +1,141 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { Video, MessageSquareText, LogOut, MessageSquare } from 'lucide-react';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { MessageSquare, HelpCircle, LogOut, Clock, Share2, MapPin, Video, Menu, X, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
+  const { signOut } = useAuth();
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (!user && !pathname.includes('/login')) {
-      router.push('/admin/login');
-    }
-  }, [user, router, pathname]);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   if (pathname === '/admin/login') {
     return children;
   }
 
   const navigation = [
-    { name: 'Vídeo', href: '/admin/dashboard/video', icon: Video },
-    { name: 'FAQs', href: '/admin/dashboard/faqs', icon: MessageSquareText },
+    { name: 'FAQs', href: '/admin/dashboard/faqs', icon: HelpCircle },
     { name: 'Mensagens', href: '/admin/dashboard/messages', icon: MessageSquare },
+    { name: 'Horário', href: '/admin/dashboard/schedule', icon: Clock },
+    { name: 'Morada', href: '/admin/dashboard/address', icon: MapPin },
+    { name: 'Vídeos', href: '/admin/dashboard/videos', icon: Video },
+    { name: 'Serviços', href: '/admin/dashboard/services', icon: Settings },
+    {
+      name: 'Redes Sociais',
+      href: '/admin/dashboard/social',
+      icon: Share2
+    }
   ];
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/admin');
-    } catch (error) {
-      console.error('Erro ao terminar sessão:', error);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#020024] via-[#5936b4] to-[#00d4ff]">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white/10 backdrop-blur-lg border-r border-white/20">
+  const Sidebar = () => (
+    <div className={`${isMobile ? (isMobileMenuOpen ? 'fixed inset-0 z-50' : 'hidden') : 'fixed top-0 left-0 h-full w-64'}`}>
+      <div className="h-full bg-white/10 backdrop-blur-xl border-r border-white/20">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6">
-            <Link href="/admin/dashboard">
-              <div className="w-32 h-24 relative mx-auto">
-                <Image
-                  src="/logo/logo.png"
-                  alt="Be2AI Logo"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            </Link>
+          <div className="p-6 border-b border-white/20 flex justify-between items-center">
+            <Image
+              src="/logo/logobranco.png"
+              alt="Be2AI Logo"
+              width={120}
+              height={40}
+              className="w-auto h-auto"
+            />
+            {isMobile && (
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-white/70 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 space-y-2">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center px-4 py-3 rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 p-4">
+            <ul className="space-y-2">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      {item.name}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </nav>
 
-          {/* User Info & Logout */}
+          {/* Logout Button */}
           <div className="p-4 border-t border-white/20">
-            <div className="px-4 py-3 text-white/70">
-              <p className="text-sm">{user?.email}</p>
-            </div>
             <button
-              onClick={handleSignOut}
-              className="w-full flex items-center px-4 py-3 text-white/70 hover:bg-white/10 hover:text-white rounded-xl transition-colors"
+              onClick={() => signOut()}
+              className="flex items-center gap-3 w-full px-4 py-3 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
             >
-              <LogOut className="w-5 h-5 mr-3" />
-              Terminar Sessão
+              <LogOut className="w-5 h-5" />
+              <span>Sair</span>
             </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-purple-900 via-purple-700 to-blue-500">
+      {/* Mobile Menu Button */}
+      {isMobile && (
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="fixed top-4 left-4 z-40 p-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Sidebar */}
+      <Sidebar />
 
       {/* Main Content */}
-      <div className="pl-64">
-        {/* Header */}
-        <header className="grid grid-cols-3 items-center p-6 bg-white/5 backdrop-blur-sm border-b border-white/10">
-          <div className="col-span-1">
-            <Link href="/admin/dashboard">
-              <h1 className="text-xl font-semibold text-white hover:text-white/80 transition-colors">Dashboard</h1>
-            </Link>
-          </div>
-          <div className="col-span-1 flex justify-center">
-            {/* Coluna central vazia para futuros elementos */}
-          </div>
-          <div className="col-span-1 flex justify-end">
-            <p className="text-white/80 italic">Impulsionamos o futuro</p>
-          </div>
-        </header>
-        <main className="p-8">
-          {children}
-        </main>
+      <div className={`${isMobile ? 'pl-0' : 'pl-64'} min-h-screen`}>
+        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
     </div>
   );
 } 

@@ -1,44 +1,55 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import Image from 'next/image';
 
-export default function LoginPage() {
+export default function CreateAdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
-      console.log('Iniciando processo de login...');
-      await signIn(email, password);
-      console.log('Login processado com sucesso');
-    } catch (error: any) {
-      console.error('Erro detalhado de login:', error);
-      
-      // Tratamento específico para cada tipo de erro
-      if (error.code === 'auth/invalid-credential') {
-        setError('Email ou senha incorretos');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Email inválido');
-      } else if (error.code === 'auth/user-disabled') {
-        setError('Usuário desativado');
-      } else if (error.code === 'auth/user-not-found') {
-        setError('Usuário não encontrado');
-      } else if (error.code === 'auth/wrong-password') {
-        setError('Senha incorreta');
-      } else if (error.code === 'auth/network-request-failed') {
-        setError('Erro de conexão. Verifique sua internet.');
-      } else {
-        setError(`Erro ao fazer login: ${error.message || 'Erro desconhecido'}`);
+      // Primeiro, criar o usuário
+      const response = await fetch('/api/auth/create-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao criar usuário');
       }
+
+      setSuccess('Usuário criado com sucesso! Fazendo login...');
+
+      // Depois de criar, fazer login automaticamente
+      try {
+        await signIn(email, password);
+        // O signIn já redireciona para /admin/dashboard
+      } catch (loginError: any) {
+        console.error('Erro ao fazer login:', loginError);
+        setSuccess('Usuário criado com sucesso! Redirecionando para o login...');
+        setTimeout(() => {
+          router.push('/admin/login');
+        }, 2000);
+      }
+    } catch (error: any) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -47,19 +58,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-900 via-purple-700 to-blue-500">
       <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl">
-        <div className="flex justify-center mb-8">
-          <Image
-            src="/logo/logobranco.png"
-            alt="Be2AI Logo"
-            width={160}
-            height={54}
-            className="w-auto h-auto"
-            priority
-          />
-        </div>
-        
         <h2 className="text-2xl font-bold text-center text-white mb-8">
-          Acesso ao Backoffice
+          Criar Usuário Administrador
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,9 +73,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/20"
-              placeholder="Insira seu email"
+              placeholder="Insira o email"
               required
-              disabled={loading}
             />
           </div>
 
@@ -89,9 +88,9 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/20"
-              placeholder="Insira sua senha"
+              placeholder="Insira a senha (mínimo 6 caracteres)"
               required
-              disabled={loading}
+              minLength={6}
             />
           </div>
 
@@ -101,12 +100,18 @@ export default function LoginPage() {
             </div>
           )}
 
+          {success && (
+            <div className="bg-green-500/10 border border-green-500/20 p-4 rounded text-green-400 text-sm text-center">
+              {success}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Criando...' : 'Criar Usuário'}
           </button>
         </form>
       </div>

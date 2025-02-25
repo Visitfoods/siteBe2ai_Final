@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import Footer from '../components/Footer';
 
 export default function PoliticaPrivacidade() {
   useEffect(() => {
@@ -125,41 +126,7 @@ export default function PoliticaPrivacidade() {
       </div>
 
       {/* Footer */}
-      <div className="relative z-20 w-full py-12 bg-black/40 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/70 text-sm">
-              © 2025 Be2AI. Todos os direitos reservados.
-            </p>
-            <div className="flex gap-6">
-              <Link 
-                href="https://www.instagram.com/be2ai/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                Instagram
-              </Link>
-              <Link 
-                href="https://www.facebook.com/be2ai" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                Facebook
-              </Link>
-              <Link 
-                href="https://www.tiktok.com/@be2ai" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                TikTok
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Footer />
     </main>
   );
 } 

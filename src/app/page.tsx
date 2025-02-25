@@ -3,10 +3,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Facebook, Instagram, Linkedin, Music, ChevronLeft, ChevronRight, UserCircle2, Map, Bot, Ghost, MessageSquareMore, HeadphonesIcon, Camera, Video, Code2, Wrench, ChevronDown, Handshake, MessageCircle, X, Send, Settings, Palette, MapPin, Clock } from "lucide-react";
-import { getMainTexts, type MainTexts } from '@/lib/firebase/firebaseUtils';
-import { db } from '@/lib/firebase/firebase';
-import { onSnapshot, doc, getDoc, collection, addDoc } from 'firebase/firestore';
+import { Facebook, Instagram, Linkedin, Music, ChevronLeft, ChevronRight, UserCircle2, Map, Bot, Ghost, MessageSquareMore, HeadphonesIcon, Camera, Video, Code2, Wrench, ChevronDown, Handshake, MessageCircle, X, Send, Settings, Palette, MapPin, Clock, type LucideIcon } from "lucide-react";
+import Footer from './components/Footer';
+import { getHomeVideos, getServices, type Service as FirebaseService } from '@/lib/firebase/firebaseUtils';
+import ServicePopup from './components/ServicePopup';
+
+export const dynamic = 'force-dynamic';
+
+interface MainTexts {
+  title: string;
+  description: string;
+}
 
 interface Faq {
   id: string;
@@ -19,15 +26,33 @@ interface FaqCategories {
   [key: string]: Faq[];
 }
 
+interface Service {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+const iconMap = {
+  Settings,
+  UserCircle2,
+  Map,
+  Bot,
+  Ghost,
+  MessageSquareMore,
+  HeadphonesIcon,
+  Camera,
+  Video,
+  Code2,
+  Palette
+};
+
 export default function Home() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const faqCategoriesRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [openQuestion, setOpenQuestion] = useState<number | null>(null);
-  const [showCookies, setShowCookies] = useState(true);
   const [activeServiceIndex, setActiveServiceIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -44,7 +69,8 @@ export default function Home() {
   ]);
   const [currentMessage, setCurrentMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedFaqCategory, setSelectedFaqCategory] = useState<FaqCategory>("Serviços");
+  const [openQuestions, setOpenQuestions] = useState<Set<string>>(new Set());
+  const [selectedFaqCategory, setSelectedFaqCategory] = useState<FaqCategory | null>(null);
   const [isDraggingFaq, setIsDraggingFaq] = useState(false);
   const [startXFaq, setStartXFaq] = useState(0);
   const [scrollLeftFaq, setScrollLeftFaq] = useState(0);
@@ -57,79 +83,180 @@ export default function Home() {
   });
   const [isInView, setIsInView] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [heroVideo, setHeroVideo] = useState('/Video/Be2AIvideo.mp4');
+  const [secondaryVideo, setSecondaryVideo] = useState('/Video/Be2AIvideo.mp4');
+  const [loading, setLoading] = useState(true);
+  const [videoKey, setVideoKey] = useState(0);
+  const [selectedService, setSelectedService] = useState<{
+    title: string;
+    description: string;
+    icon: LucideIcon;
+  } | null>(null);
+  const [servicesData, setServicesData] = useState<FirebaseService[]>([]);
 
-  const services = [
-    { title: "À SUA MEDIDA", description: "", icon: Settings },
-    { title: "CLONES VIRTUAIS", description: "", icon: UserCircle2 },
-    { title: "GUIAS TURÍSTICOS VIRTUAIS", description: "", icon: Map },
-    { title: "ASSISTENTES VIRTUAIS", description: "", icon: Bot },
-    { title: "MASCOTES VIRTUAIS", description: "", icon: Ghost },
-    { title: "CHATBOTS", description: "", icon: MessageSquareMore },
-    { title: "ASSISTENTES PÓS-VENDA", description: "", icon: HeadphonesIcon },
-    { title: "SOFTWARE", description: "", icon: Code2 },
-    { title: "VISITAS VIRTUAIS", description: "", icon: Video },
-    { title: "FOTOGRAFIA", description: "", icon: Camera },
-    { title: "VÍDEO", description: "", icon: Video },
-    { title: "DESIGN", description: "", icon: Palette }
-  ];
+  // Memoizar os services para evitar recriações desnecessárias
+  const services = React.useMemo(() => {
+    if (servicesData.length === 0) {
+      // Fallback para os serviços padrão se ainda não carregou do Firebase
+      return [
+        { 
+          title: "À SUA MEDIDA",
+          description: "Desenvolvemos soluções personalizadas que se adaptam perfeitamente às necessidades específicas do seu negócio, garantindo máxima eficiência e resultados.",
+          icon: Settings 
+        },
+        { 
+          title: "CLONES VIRTUAIS",
+          description: "Crie uma réplica digital de si mesmo ou da sua equipa, permitindo interações personalizadas e atendimento 24/7 com a sua própria identidade.",
+          icon: UserCircle2 
+        },
+        { 
+          title: "GUIAS TURÍSTICOS VIRTUAIS",
+          description: "Transforme a experiência turística com guias virtuais inteligentes que oferecem tours personalizados e informações culturais ricas em tempo real.",
+          icon: Map 
+        },
+        { 
+          title: "ASSISTENTES VIRTUAIS",
+          description: "Automatize tarefas e melhore o atendimento com assistentes virtuais inteligentes que aprendem e se adaptam ao seu negócio.",
+          icon: Bot 
+        },
+        { 
+          title: "MASCOTES VIRTUAIS",
+          description: "Dê vida à identidade da sua marca com mascotes virtuais interativas que criam conexões emocionais com seus clientes.",
+          icon: Ghost 
+        },
+        { 
+          title: "CHATBOTS",
+          description: "Implemente chatbots inteligentes que oferecem suporte instantâneo e personalizado, melhorando a experiência do cliente.",
+          icon: MessageSquareMore 
+        },
+        { 
+          title: "ASSISTENTES PÓS-VENDA",
+          description: "Mantenha seus clientes satisfeitos com assistentes pós-venda que garantem suporte contínuo e acompanhamento personalizado.",
+          icon: HeadphonesIcon 
+        },
+        { 
+          title: "SOFTWARE",
+          description: "Desenvolvemos soluções de software sob medida, desde aplicações web até sistemas complexos de gestão empresarial.",
+          icon: Code2 
+        },
+        { 
+          title: "VISITAS VIRTUAIS",
+          description: "Ofereça experiências imersivas com tours virtuais interativos que permitem explorar espaços de forma realista e envolvente.",
+          icon: Video 
+        },
+        { 
+          title: "FOTOGRAFIA",
+          description: "Capture a essência do seu negócio com serviços de fotografia profissional que destacam o melhor dos seus produtos e serviços.",
+          icon: Camera 
+        },
+        { 
+          title: "VÍDEO",
+          description: "Conte sua história através de produções audiovisuais de alta qualidade que engajam e inspiram seu público-alvo.",
+          icon: Video 
+        },
+        { 
+          title: "DESIGN",
+          description: "Crie uma identidade visual impactante com designs modernos e criativos que comunicam a essência da sua marca.",
+          icon: Palette 
+        }
+      ];
+    }
 
-  const faqCategories = [
-    "Serviços",
-    "Tecnologia",
-    "Segurança",
-    "Preços",
-    "Suporte",
-    "Integração",
-    "Aplicações",
-    "Atualizações"
-  ] as const;
+    // Mapear os serviços do Firebase para o formato necessário
+    return servicesData.map(service => ({
+      title: service.title,
+      description: service.description,
+      icon: iconMap[service.icon as keyof typeof iconMap] || Settings
+    }));
+  }, [servicesData]);
+
+  // Memoizar as categorias de FAQ
+  const faqCategories = React.useMemo(() => [
+    "Sobre a Empresa",
+    "Serviços e Soluções",
+    "Implementação e Integração"
+  ] as const, []);
 
   type FaqCategory = typeof faqCategories[number];
 
+  // Carregar dados iniciais apenas uma vez
   useEffect(() => {
-    // Configurar listener para atualizações em tempo real
-    const textsRef = doc(db, 'settings', 'mainTexts');
-    
-    console.log('Configurando listener para atualizações em tempo real');
-    
-    const unsubscribe = onSnapshot(
-      textsRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          console.log('Dados recebidos do Firestore:', data);
-          setMainTexts({
-            title: data.title,
-            description: data.description
-          });
-        } else {
-          console.log('Documento não existe no Firestore');
+    let mounted = true;
+
+    const loadInitialData = async () => {
+      try {
+        const [faqsData, videosData, servicesData] = await Promise.all([
+          fetchFaqs(),
+          getHomeVideos(),
+          getServices()
+        ]);
+
+        if (!mounted) return;
+
+        if (videosData) {
+          setHeroVideo(videosData.heroVideo);
+          setSecondaryVideo(videosData.secondaryVideo);
+          setVideoKey(prev => prev + 1);
         }
-      },
-      (error) => {
-        console.error('Erro no listener:', error);
+
+        if (servicesData) {
+          setServicesData(servicesData);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados iniciais:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    // Cleanup function
+    loadInitialData();
+
     return () => {
-      console.log('Removendo listener');
-      unsubscribe();
+      mounted = false;
     };
-  }, []); // Dependência vazia para executar apenas uma vez
-
-  useEffect(() => {
-    const loadOtherData = async () => {
-      await fetchFaqs();
-      await fetchVideoUrl();
-    };
-
-    loadOtherData();
   }, []);
 
+  // Atualizar vídeos periodicamente com cleanup adequado
+  useEffect(() => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    const loadVideos = async () => {
+      try {
+        const data = await getHomeVideos();
+        if (!mounted) return;
+
+        if (data) {
+          setHeroVideo(data.heroVideo);
+          setSecondaryVideo(data.secondaryVideo);
+          setVideoKey(prev => prev + 1);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar vídeos:', error);
+      } finally {
+        if (mounted) {
+          timeoutId = setTimeout(loadVideos, 30000);
+        }
+      }
+    };
+
+    loadVideos();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Otimizar fetchFaqs para usar cache
   const fetchFaqs = async () => {
     try {
-      const response = await fetch('/api/faqs');
+      const response = await fetch('/api/faqs', {
+        next: { revalidate: 60 } // Cache por 1 minuto
+      });
+      
       if (!response.ok) {
         throw new Error('Erro ao carregar FAQs');
       }
@@ -144,81 +271,57 @@ export default function Home() {
       }, {} as Record<FaqCategory, Faq[]>);
 
       setFaqs(faqsByCategory);
+      return data;
     } catch (error) {
       console.error('Erro ao carregar FAQs:', error);
+      return null;
     } finally {
       setIsLoadingFaqs(false);
     }
   };
 
-  const fetchVideoUrl = async () => {
+  // Otimizar handleSubmit para evitar múltiplos envios
+  const handleSubmit = React.useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      nome: formData.get("nome"),
+      email: formData.get("email"),
+      mensagem: formData.get("mensagem"),
+      dataEnvio: new Date().toISOString(),
+      status: 'não lida' as const
+    };
+
     try {
-      const response = await fetch('/api/video');
-      if (!response.ok) {
-        throw new Error('Erro ao carregar vídeo');
-      }
-      const data = await response.json();
-      setVideoUrl(data.localPath);
+      await Promise.all([
+        fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+      ]);
+
+      setShowSuccess(true);
+      e.currentTarget.reset();
     } catch (error) {
-      console.error('Erro ao carregar vídeo:', error);
+      console.error('Erro ao processar mensagem:', error);
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setShowSuccess(false), 3000);
     }
-  };
+  }, [isSubmitting]);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('active');
-          }
-        });
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '0px'
-      }
-    );
-
-    const revealElements = document.querySelectorAll('.scroll-reveal');
-    revealElements.forEach((element) => observer.observe(element));
-
-    return () => {
-      revealElements.forEach((element) => observer.unobserve(element));
-    };
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveServiceIndex((current) => (current + 1) % services.length);
-    }, 2000); // Muda a cada 2 segundos
-
-    return () => clearInterval(interval);
-  }, [services.length]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      const servicesPosition = servicesRef.current?.offsetTop || 0;
-      const windowHeight = window.innerHeight;
-      
-      if (scrollPosition <= 0) {
-        // Se estiver no topo, reseta o progresso
-        setScrollProgress(0);
-      } else if (scrollPosition < servicesPosition - windowHeight) {
-        // Se ainda não chegou aos serviços, calcula progresso normal
-        const progress = (scrollPosition / (servicesPosition - windowHeight)) * 100;
-        setScrollProgress(progress);
-      } else {
-        // Se já passou dos serviços, mantém 100%
-        setScrollProgress(100);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleScroll = (direction: 'left' | 'right') => {
+  // Memoizar funções de manipulação de eventos
+  const handleScroll = React.useCallback((direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 400;
       const newScrollPosition = scrollContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
@@ -227,63 +330,14 @@ export default function Home() {
         behavior: 'smooth'
       });
     }
-  };
+  }, []);
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = React.useCallback((e: React.WheelEvent) => {
     if (scrollContainerRef.current) {
       e.preventDefault();
       scrollContainerRef.current.scrollLeft += e.deltaY;
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      nome: formData.get("nome"),
-      email: formData.get("email"),
-      mensagem: formData.get("mensagem"),
-      dataEnvio: new Date().toISOString(),
-      status: 'não lida'
-    };
-
-    try {
-      // Salvar no Firebase
-      const messagesRef = collection(db, 'messages');
-      await addDoc(messagesRef, data);
-
-      // Enviar email
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.details || 'Erro ao enviar mensagem');
-      }
-
-      setShowSuccess(true);
-      (e.target as HTMLFormElement).reset();
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error: any) {
-      console.error("Erro:", error);
-      setError(error.message || "Erro ao enviar mensagem. Tente novamente.");
-    } finally {
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 500);
-    }
-  };
+  }, []);
 
   const scrollToServices = () => {
     servicesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -291,12 +345,6 @@ export default function Home() {
 
   const handleEmailClick = () => {
     window.location.href = "mailto:be2aigeral@gmail.com?subject=Contacto via Website";
-  };
-
-  const handleAcceptCookies = () => {
-    setShowCookies(false);
-    // Aqui você pode adicionar lógica para salvar a preferência do usuário
-    localStorage.setItem('cookiesAccepted', 'true');
   };
 
   const LoadingSpinner = () => (
@@ -341,43 +389,41 @@ export default function Home() {
   };
 
   const calculateTransform = () => {
-    if (!trackRef.current) return;
+    if (!trackRef.current || isDragging) return;
     
     const scrollProgress = window.scrollY;
     const speed = 0.5;
     const transform = scrollProgress * speed;
     
-    if (!isDragging) { // Só atualiza a posição se não estiver arrastando
-      trackRef.current.style.transform = `translate3d(-${transform}px, 0, 0)`;
-    }
-    progressRef.current = scrollProgress;
+    requestAnimationFrame(() => {
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(-${transform}px, 0, 0)`;
+      }
+    });
   };
 
   useEffect(() => {
+    let isAnimating = false;
+    let rafId: number;
+
     const handleScroll = () => {
-      setScrolling(true);
-      if (!requestRef.current) {
-        requestRef.current = requestAnimationFrame(animate);
+      if (!isAnimating) {
+        isAnimating = true;
+        rafId = requestAnimationFrame(() => {
+          calculateTransform();
+          isAnimating = false;
+        });
       }
-      setTimeout(() => setScrolling(false), 150);
     };
 
-    const animate = (time: number) => {
-      if (previousTimeRef.current !== undefined) {
-        calculateTransform();
-      }
-      previousTimeRef.current = time;
-      requestRef.current = requestAnimationFrame(animate);
-    };
-
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
     };
-  }, []);
+  }, [isDragging]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -411,135 +457,120 @@ export default function Home() {
   };
 
   useEffect(() => {
+    let isAnimating = false;
+    let rafId: number;
+
     const handleScroll = () => {
-      const heroSection = document.querySelector('section');
-      if (heroSection) {
-        const rect = heroSection.getBoundingClientRect();
-        setIsInView(rect.bottom > 0);
+      if (!isAnimating) {
+        isAnimating = true;
+        rafId = requestAnimationFrame(() => {
+          const position = window.pageYOffset;
+          setScrollPosition(position);
+          
+          // Ativar scroll reveal nos elementos
+          const scrollRevealElements = document.querySelectorAll('.scroll-reveal');
+          scrollRevealElements.forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            const isVisible = rect.top <= window.innerHeight * 0.8;
+            if (isVisible) {
+              element.classList.add('active');
+            }
+          });
+          
+          const servicesSection = document.querySelector('.services-gradient') as HTMLElement;
+          const faqSection = document.querySelector('.faq-gradient') as HTMLElement;
+          
+          if (servicesSection && faqSection) {
+            const servicesSectionRect = servicesSection.getBoundingClientRect();
+            const transitionPoint = servicesSectionRect.bottom;
+            const scrollPercentage = Math.min(Math.max((window.innerHeight - transitionPoint) / window.innerHeight, 0), 1);
+            
+            servicesSection.style.opacity = `${Math.max(1 - scrollPercentage, 0.1)}`;
+            faqSection.style.opacity = `${Math.max(scrollPercentage, 0.1)}`;
+          }
+          
+          isAnimating = false;
+        });
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    // Executar uma vez no carregamento para verificar elementos já visíveis
+    handleScroll();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const position = window.pageYOffset;
-      setScrollPosition(position);
-      
-      // Atualiza as cores com base na posição do scroll
-      const servicesSection = document.querySelector('.services-gradient') as HTMLElement;
-      const faqSection = document.querySelector('.faq-gradient') as HTMLElement;
-      
-      if (servicesSection && faqSection) {
-        const servicesSectionRect = servicesSection.getBoundingClientRect();
-        
-        // Calcula a porcentagem de scroll entre as seções
-        const transitionPoint = servicesSectionRect.bottom;
-        const scrollPercentage = Math.min(Math.max((window.innerHeight - transitionPoint) / window.innerHeight, 0), 1);
-        
-        // Aplica a transição suave apenas ao background com uma opacidade mínima
-        servicesSection.style.opacity = `${Math.max(1 - scrollPercentage, 0.1)}`;
-        faqSection.style.opacity = `${Math.max(scrollPercentage, 0.1)}`;
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
     };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <main className="relative w-full bg-gradient-to-b from-purple-900 via-purple-700 to-blue-500">
+    <main className="relative w-full">
       {/* Hero Section com Vídeo */}
       <section className="relative h-screen w-full overflow-hidden">
         {/* Vídeo em background */}
         <video
+          key={`hero-${videoKey}`}
           autoPlay
           loop
           muted
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover"
         >
-          <source src={videoUrl} type="video/mp4" />
+          <source src={`${heroVideo}?v=${videoKey}`} type={heroVideo.toLowerCase().endsWith('.mp4') ? 'video/mp4' : heroVideo.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4'} />
+          Seu navegador não suporta o elemento de vídeo.
         </video>
 
         {/* Overlay escuro para melhorar a visibilidade */}
-        <div className="absolute top-0 left-0 w-full h-full bg-black/30" />
-
-        {/* Logo no canto superior direito */}
-        <div className="absolute top-6 right-6 z-50">
-          <Image
-            src="/logo/logobranco.png"
-            alt="Be2AI Logo"
-            width={160}
-            height={54}
-            className="w-auto h-auto"
-            priority
-          />
-        </div>
+        <div className="absolute top-0 left-0 w-full h-full" />
 
         {/* Botão Fala Comigo com Glassmorphism */}
         <button 
           onClick={() => setIsChatOpen(true)}
-          className="absolute bottom-8 right-8 z-50 px-10 py-5 
+          className="fixed lg:absolute bottom-4 right-4 sm:bottom-6 sm:right-6 lg:bottom-8 lg:right-8 z-50 
+            px-4 py-2 sm:px-6 sm:py-3 lg:px-10 lg:py-5
             bg-white/10 backdrop-blur-md 
             border border-white/20 
-            text-white text-xl font-medium
+            text-white text-sm sm:text-base lg:text-xl font-medium
             transition-all duration-300
             hover:bg-white/20 hover:border-white/30 hover:scale-105
             hover:shadow-[0_8px_32px_rgba(255,255,255,0.1)]
             focus:outline-none focus:ring-2 focus:ring-white/30
             group"
         >
-          <span className="relative flex items-center gap-3">
-            <MessageCircle className="w-6 h-6 transition-transform group-hover:rotate-12" />
+          <span className="relative flex items-center gap-2 sm:gap-3">
+            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 transition-transform group-hover:rotate-12" />
             Fala Comigo
           </span>
         </button>
       </section>
 
       {/* Serviços Section */}
-      <section className="services-section relative w-full overflow-hidden">
-        <div className="flex flex-col lg:flex-row h-full w-full">
-          {/* Coluna do Vídeo */}
-          <div className="w-full lg:w-1/2 relative min-h-[300px] lg:min-h-screen">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute top-0 left-0 w-full h-full object-cover"
-            >
-              <source src={videoUrl} type="video/mp4" />
-            </video>
-            <div className="absolute inset-0 bg-black/30" />
-          </div>
-
-          {/* Coluna dos Serviços */}
-          <div className="w-full lg:w-1/2 relative">
-            <div className="services-gradient absolute inset-0 bg-gradient-to-b from-[#2389DA] via-[#2389DA] to-[#2389DA] transition-all duration-1000"></div>
-            <div className="relative w-full px-4 sm:px-8 lg:px-12 py-12 lg:py-24">
-              <h2 className="text-3xl lg:text-4xl font-bold text-center text-white mb-8 lg:mb-16">
+      <section className="services-section relative w-full min-h-[87vh] overflow-hidden backdrop-blur-sm">
+        <div className="flex flex-col h-full w-full min-h-[87vh]">
+          <div className="w-full relative min-h-[60vh] lg:min-h-[87vh]">
+            <div className="services-gradient absolute inset-0 transition-all duration-1000"></div>
+            <div className="relative w-full h-full px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 lg:py-24 flex flex-col justify-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-white mb-6 sm:mb-8 lg:mb-16">
                 SERVIÇOS
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 max-w-7xl mx-auto">
                 {services.map((service, index) => (
                   <div
                     key={index}
-                    className={`service-card group relative border border-white/10 transition-all duration-300 cursor-pointer overflow-hidden backdrop-blur-sm bg-white/5 ${
-                      service.title === "À SUA MEDIDA" ? "shadow-[0_0_40px_rgba(255,255,255,0.5)] hover:shadow-[0_0_50px_rgba(255,255,255,0.6)]" : ""
-                    }`}
+                    onClick={() => setSelectedService(service)}
+                    className="service-card group relative border border-white/10 transition-all duration-300 cursor-pointer overflow-hidden backdrop-blur-sm bg-white/5 hover:bg-white/10 hover:border-white/20 h-[218px] lg:h-auto"
                   >
-                    <div className="relative flex flex-col items-center justify-center text-center h-full p-3 sm:p-4 gap-3 sm:gap-4 group-hover:scale-105 transition-transform duration-300">
-                      <div className="p-3 sm:p-4 bg-white/5 group-hover:bg-white/20 transform group-hover:-translate-y-1 transition-all duration-300">
+                    <div className="relative flex flex-col items-center justify-center text-center h-full p-3 sm:p-4 gap-2 sm:gap-3 md:gap-4">
+                      <div className="p-2 sm:p-3 md:p-4 bg-white/5 rounded-lg group-hover:bg-white/10 transition-colors">
                         {React.createElement(service.icon, { 
-                          className: "service-icon text-white w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 group-hover:rotate-6 transition-transform duration-300" 
+                          className: "service-icon text-white w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" 
                         })}
                       </div>
-                      <h3 className="service-title text-sm sm:text-base font-semibold text-white whitespace-normal group-hover:text-white/90">{service.title}</h3>
+                      <h3 className="service-title text-xs sm:text-sm md:text-base font-semibold text-white whitespace-normal">{service.title}</h3>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/0 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                 ))}
               </div>
@@ -548,168 +579,119 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <div className="faq-section relative z-20 w-full">
-        <div className="faq-gradient absolute inset-0 bg-gradient-to-b from-[#6B21A8] via-[#7E22CE] to-[#2389DA] transition-all duration-1000"></div>
-        <div className="relative w-full h-full py-8 sm:py-12 px-4 sm:px-8">
-          <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-            <h2 className="text-3xl sm:text-4xl font-bold text-center text-white mb-4 sm:mb-6 scroll-reveal relative z-10">
-              PERGUNTAS FREQUENTES
+      {/* FAQ Section com Vídeo */}
+      <div className="faq-section relative z-20 w-full backdrop-blur-sm">
+        <div className="relative w-full h-full">
+          <div className="w-full">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center text-white mb-12 scroll-reveal relative z-10">
+              FAQS
             </h2>
 
-            {/* Categoria Buttons */}
-            <div className="flex justify-center mb-4 sm:mb-6 relative z-10 overflow-hidden">
-              <div 
-                ref={faqCategoriesRef}
-                className="faq-categories-container flex gap-2 sm:gap-4 px-2 sm:px-4"
-                onMouseDown={handleFaqMouseDown}
-                onMouseMove={handleFaqMouseMove}
-                onMouseUp={handleFaqMouseUp}
-                onMouseLeave={handleFaqMouseLeave}
-              >
-                {faqCategories.map((category) => (
+            <div className="flex flex-col lg:flex-row items-start gap-8">
+              {/* Vídeo ao lado dos FAQs */}
+              <div className="w-full lg:w-1/2 h-[calc(100vw*16/9)] sm:h-[calc(100vw*5/4)] lg:h-screen">
+                <div className="relative w-full h-full overflow-hidden">
+                  <video
+                    key={`secondary-${videoKey}`}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  >
+                    <source src={`${secondaryVideo}?v=${videoKey}`} type={secondaryVideo.toLowerCase().endsWith('.mp4') ? 'video/mp4' : secondaryVideo.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4'} />
+                    Seu navegador não suporta o elemento de vídeo.
+                  </video>
+                  <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+                </div>
+              </div>
+
+              {/* Conteúdo FAQs */}
+              <div className="w-full lg:w-1/2 px-4 lg:px-0">
+                <div className="flex overflow-x-auto whitespace-nowrap gap-2 mb-8 pb-4 hide-scrollbar">
                   <button
-                    key={category}
-                    onClick={() => setSelectedFaqCategory(category)}
-                    className={`faq-category-button px-3 sm:px-4 py-2 transition-colors whitespace-nowrap text-sm sm:text-base ${
-                      selectedFaqCategory === category
+                    onClick={() => setSelectedFaqCategory(null)}
+                    className={`flex-none px-6 py-3 transition-colors text-base ${
+                      selectedFaqCategory === null
                         ? 'bg-white/20 text-white'
                         : 'bg-white/5 text-white/70 hover:bg-white/10'
-                    } border border-white/20`}
-                    style={{ userSelect: 'none' }}
+                    }`}
                   >
-                    {category}
+                    Todas
                   </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="space-y-3 sm:space-y-4">
-              {isLoadingFaqs ? (
-                <div className="text-center text-white/70">Carregando FAQs...</div>
-              ) : faqs[selectedFaqCategory]?.length > 0 ? (
-                faqs[selectedFaqCategory].map((faq, index) => (
-                  <div
-                    key={faq.id}
-                    className="bg-white/5 border border-white/10 overflow-hidden"
-                  >
+                  {faqCategories.map((category) => (
                     <button
-                      onClick={() => setOpenQuestion(openQuestion === index ? null : index)}
-                      className="w-full text-left p-3 sm:p-4"
+                      key={category}
+                      onClick={() => setSelectedFaqCategory(category as FaqCategory)}
+                      className={`flex-none px-6 py-3 transition-colors text-base ${
+                        selectedFaqCategory === category
+                          ? 'bg-white/20 text-white'
+                          : 'bg-white/5 text-white/70 hover:bg-white/10'
+                      }`}
                     >
-                      <div className="flex justify-between items-center gap-4">
-                        <h3 className="text-base sm:text-lg font-medium text-white">{faq.question}</h3>
-                        <span className="text-white/70 flex-shrink-0">
-                          {openQuestion === index ? '−' : '+'}
-                        </span>
-                      </div>
-                      {openQuestion === index && (
-                        <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/70">{faq.answer}</p>
-                      )}
+                      {category}
                     </button>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-white/70">
-                  Nenhuma FAQ encontrada para esta categoria.
+                  ))}
                 </div>
-              )}
+
+                <div className="space-y-4">
+                  {isLoadingFaqs ? (
+                    <div className="text-center text-white/70">Carregando FAQs...</div>
+                  ) : (
+                    Object.entries(faqs)
+                    .filter(([category]) => selectedFaqCategory === null || category === selectedFaqCategory)
+                    .sort(([a], [b]) => {
+                      if (selectedFaqCategory === null && a === "Sobre a Empresa") return -1;
+                      if (selectedFaqCategory === null && b === "Sobre a Empresa") return 1;
+                      return 0;
+                    })
+                    .map(([category, categoryFaqs]) => (
+                      <div key={category}>
+                        <div className="space-y-4">
+                          {categoryFaqs.map((faq, index) => (
+                            <div
+                              key={faq.id}
+                              className="bg-white/5 border border-white/10 overflow-hidden"
+                            >
+                              <button
+                                onClick={() => {
+                                  setOpenQuestions(prev => {
+                                    const newSet = new Set(prev);
+                                    if (newSet.has(faq.id)) {
+                                      newSet.delete(faq.id);
+                                    } else {
+                                      newSet.add(faq.id);
+                                    }
+                                    return newSet;
+                                  });
+                                }}
+                                className="w-full text-left p-[0.8rem]"
+                              >
+                                <div className="flex justify-between items-center gap-4">
+                                  <h3 className="text-lg font-medium text-white">{faq.question}</h3>
+                                  <span className="text-white/70 flex-shrink-0 text-2xl">
+                                    {openQuestions.has(faq.id) ? '−' : '+'}
+                                  </span>
+                                </div>
+                                {openQuestions.has(faq.id) && (
+                                  <p className="mt-4 text-base text-white/70 pr-8">{faq.answer}</p>
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer Section */}
-      <div className="relative w-full py-12" style={{ zIndex: 20 }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2389DA] to-[#2389DA] backdrop-blur-xl opacity-90"></div>
-        <div className="relative w-full px-4 sm:px-8 lg:px-12 max-w-6xl mx-auto">
-          <div className="flex flex-col items-center space-y-6 sm:space-y-8">
-            {/* Três Colunas: Morada, Horário e Redes Sociais */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-[45%_27.5%_27.5%] gap-8 items-start footer-grid">
-              {/* Coluna da Morada */}
-              <div className="flex flex-col items-center md:items-start text-white space-y-2">
-                <h3 className="text-lg font-semibold mb-2">Morada</h3>
-                <div className="flex items-center gap-2 text-white/80">
-                  <MapPin className="w-5 h-5 flex-shrink-0" />
-                  <p className="text-center md:text-left">
-                    Rua Álvaro Pires Miranda 270, 2415-369 Leiria
-                  </p>
-                </div>
-              </div>
-
-              {/* Coluna do Horário */}
-              <div className="flex flex-col items-center md:items-start text-white space-y-2">
-                <h3 className="text-lg font-semibold mb-2">Horário</h3>
-                <div className="flex items-center gap-2 text-white/80">
-                  <Clock className="w-5 h-5" />
-                  <p>Segunda à Sexta, 9h - 18h</p>
-                </div>
-              </div>
-
-              {/* Coluna das Redes Sociais */}
-              <div className="flex flex-col items-center md:items-start text-white space-y-2">
-                <h3 className="text-lg font-semibold mb-2">Redes Sociais</h3>
-                <div className="flex gap-4">
-                  <Link 
-                    href="https://www.instagram.com/be2ai/" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-white/80 hover:text-white transition-colors"
-                  >
-                    <Instagram className="w-6 h-6" />
-                  </Link>
-                  <Link 
-                    href="https://www.facebook.com/be2ai" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-white/80 hover:text-white transition-colors"
-                  >
-                    <Facebook className="w-6 h-6" />
-                  </Link>
-                  <Link 
-                    href="https://www.linkedin.com/company/be2ai" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-white/80 hover:text-white transition-colors"
-                  >
-                    <Linkedin className="w-6 h-6" />
-                  </Link>
-                  <Link 
-                    href="https://www.tiktok.com/@be2ai" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-white/80 hover:text-white transition-colors"
-                  >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0011.14-4.02v-7a8.16 8.16 0 004.65 1.48V7.1a4.79 4.79 0 01-1.2-.41z"/>
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Copyright e Links */}
-            <div className="w-full pt-12 mt-12 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex flex-col md:flex-row items-center gap-1 text-white/70 text-xs">
-                <p>© 2025 Be2AI. Todos os direitos reservados.</p>
-                <span className="hidden md:inline mx-1">·</span>
-                <Link href="/politica-privacidade" className="hover:text-white transition-colors">
-                  Política de Privacidade
-                </Link>
-                <span className="hidden md:inline mx-1">·</span>
-                <Link 
-                  href="https://www.livroreclamacoes.pt" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-white transition-colors"
-                >
-                  Livro de Reclamações
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Footer />
 
       {/* Formulário de Contacto Flutuante */}
       {isChatOpen && (
@@ -848,25 +830,14 @@ export default function Home() {
         </button>
       )}
 
-      {/* Barra de Cookies */}
-      {showCookies && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#2389DA]/95 backdrop-blur-lg z-50 p-4 cookie-bar border-t border-white/10">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-white/80 text-sm text-center md:text-left">
-              Utilizamos cookies para melhorar a sua experiência no nosso website. Ao continuar a navegar, está a concordar com a nossa{' '}
-              <Link href="/politica-privacidade" className="text-white hover:underline">
-                Política de Privacidade
-              </Link>
-              .
-            </p>
-            <button
-              onClick={handleAcceptCookies}
-              className="px-6 py-2 bg-white text-[#2389DA] hover:bg-white/90 transition-colors text-sm font-medium whitespace-nowrap"
-            >
-              Aceitar Cookies
-            </button>
-          </div>
-        </div>
+      {/* Pop-up do Serviço */}
+      {selectedService && (
+        <ServicePopup
+          title={selectedService.title}
+          description={selectedService.description}
+          icon={selectedService.icon}
+          onClose={() => setSelectedService(null)}
+        />
       )}
     </main>
   );

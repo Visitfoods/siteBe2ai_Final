@@ -1,357 +1,326 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { FAQ, getFaqs, createFaq, updateFaq, deleteFaq, updateFaqOrder } from '@/lib/firebase/firebaseUtils';
+import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided, DropResult } from '@hello-pangea/dnd';
+import { Plus, Pencil, Trash2, GripVertical, Copy } from 'lucide-react';
+import Image from 'next/image';
 
-interface Faq {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-}
-
-export default function FaqsManagement() {
-  const [faqs, setFaqs] = useState<Faq[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedFaq, setSelectedFaq] = useState<Faq | null>(null);
-  const { user } = useAuth();
+export default function FAQsPage() {
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Sobre a Empresa');
 
   const categories = [
-    "Serviços",
-    "Tecnologia",
-    "Segurança",
-    "Preços",
-    "Suporte",
-    "Integração",
-    "Aplicações",
-    "Atualizações"
+    "Sobre a Empresa",
+    "Serviços e Soluções",
+    "Implementação e Integração",
+    "Segurança e Privacidade",
+    "Preços e Planos"
   ];
 
   useEffect(() => {
-    if (!user) return;
-    fetchFaqs();
-  }, [user]);
+    loadFaqs();
+  }, []);
 
-  const fetchFaqs = async () => {
-    if (!user) return;
-
+  const loadFaqs = async () => {
     try {
-      const token = await user.getIdToken(true);
-      const response = await fetch('/api/admin/faqs', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao carregar FAQs');
-      }
-      
-      const data = await response.json();
-      setFaqs(data.faqs);
-    } catch (error: any) {
-      setError(error.message);
+      console.log('Carregando FAQs...');
+      const loadedFaqs = await getFaqs();
+      console.log('FAQs carregadas:', loadedFaqs);
+      setFaqs(loadedFaqs);
+    } catch (error) {
       console.error('Erro ao carregar FAQs:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleAddFaq = async (formData: { category: string; question: string; answer: string }) => {
-    if (!user) return;
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const faqData = {
+      category: formData.get('category') as string,
+      question: formData.get('question') as string,
+      answer: formData.get('answer') as string,
+      order: editingFaq ? editingFaq.order : faqs.length
+    };
 
     try {
-      const token = await user.getIdToken(true);
-      const response = await fetch('/api/admin/faqs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao adicionar FAQ');
+      if (editingFaq) {
+        await updateFaq(editingFaq.id, faqData);
+      } else {
+        await createFaq(faqData);
       }
-
-      const data = await response.json();
-      setFaqs([...faqs, data.faq]);
-      setShowAddModal(false);
-    } catch (error: any) {
-      setError(error.message);
-      console.error('Erro ao adicionar FAQ:', error);
+      
+      await loadFaqs();
+      setShowForm(false);
+      setEditingFaq(null);
+    } catch (error) {
+      console.error('Erro ao salvar FAQ:', error);
     }
   };
 
-  const handleEditFaq = async (formData: { category: string; question: string; answer: string }) => {
-    if (!selectedFaq || !user) return;
-
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta FAQ?')) return;
+    
     try {
-      const token = await user.getIdToken(true);
-      const response = await fetch('/api/admin/faqs', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, id: selectedFaq.id }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao editar FAQ');
-      }
-
-      const data = await response.json();
-      setFaqs(faqs.map(faq => 
-        faq.id === selectedFaq.id ? { ...faq, ...data.faq } : faq
-      ));
-      setShowEditModal(false);
-      setSelectedFaq(null);
-    } catch (error: any) {
-      setError(error.message);
-      console.error('Erro ao editar FAQ:', error);
-    }
-  };
-
-  const handleDeleteFaq = async (faqId: string) => {
-    if (!user || !confirm('Tem certeza que deseja excluir esta FAQ?')) return;
-
-    try {
-      const token = await user.getIdToken(true);
-      const response = await fetch('/api/admin/faqs', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ id: faqId }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao excluir FAQ');
-      }
-
-      setFaqs(faqs.filter(faq => faq.id !== faqId));
-    } catch (error: any) {
-      setError(error.message);
+      await deleteFaq(id);
+      await loadFaqs();
+    } catch (error) {
       console.error('Erro ao excluir FAQ:', error);
     }
   };
 
-  const Modal = ({ 
-    show, 
-    onClose, 
-    title, 
-    onSubmit,
-    initialData = {
-      category: 'Serviços',
-      question: '',
-      answer: ''
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(faqs);
+    
+    // Separar FAQs por categoria
+    const currentCategoryFaqs = items.filter(faq => faq.category === selectedCategory);
+    const otherFaqs = items.filter(faq => faq.category !== selectedCategory);
+
+    // Reordenar apenas as FAQs da categoria atual
+    const [reorderedItem] = currentCategoryFaqs.splice(result.source.index, 1);
+    currentCategoryFaqs.splice(result.destination.index, 0, reorderedItem);
+
+    // Atualizar a ordem das FAQs da categoria atual
+    const updatedCategoryFaqs = currentCategoryFaqs.map((faq, index) => ({
+      ...faq,
+      order: index * 100 // Usar a mesma escala que no backend
+    }));
+
+    // Combinar as FAQs atualizadas com as outras categorias
+    const updatedItems = [...updatedCategoryFaqs, ...otherFaqs];
+    setFaqs(updatedItems);
+
+    try {
+      await updateFaqOrder(updatedCategoryFaqs);
+    } catch (error) {
+      console.error('Erro ao atualizar ordem:', error);
+      await loadFaqs(); // Recarrega a ordem original em caso de erro
     }
-  }: { 
-    show: boolean; 
-    onClose: () => void; 
-    title: string;
-    onSubmit: (data: { category: string; question: string; answer: string }) => Promise<void>;
-    initialData?: {
-      category: string;
-      question: string;
-      answer: string;
-    };
-  }) => {
-    if (!show) return null;
-
-    const [formData, setFormData] = useState(initialData);
-
-    useEffect(() => {
-      setFormData(initialData);
-    }, [initialData]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      const { name, value } = e.target;
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      onSubmit(formData);
-    };
-
-    return (
-      <div className="fixed inset-0 z-50">
-        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-[#1e1b4b] p-8 rounded-2xl">
-          <h2 className="text-2xl font-bold text-white mb-6">{title}</h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-white mb-2">Categoria</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white text-black rounded-lg"
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-white mb-2">Pergunta</label>
-              <input
-                type="text"
-                name="question"
-                value={formData.question}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white text-black rounded-lg"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white mb-2">Resposta</label>
-              <textarea
-                name="answer"
-                value={formData.answer}
-                onChange={handleInputChange}
-                rows={4}
-                className="w-full px-4 py-3 bg-white text-black rounded-lg resize-none"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
   };
 
-  if (isLoading) {
+  const handleDuplicate = async (faq: FAQ) => {
+    try {
+      const duplicatedFaq = {
+        category: faq.category,
+        question: `${faq.question} (Cópia)`,
+        answer: faq.answer,
+        order: faqs.length // Adiciona no final da lista
+      };
+
+      await createFaq(duplicatedFaq);
+      await loadFaqs();
+    } catch (error) {
+      console.error('Erro ao duplicar FAQ:', error);
+    }
+  };
+
+  const filteredFaqs = faqs.filter(faq => faq.category === selectedCategory);
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-white">A carregar...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-white">Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Gestão de FAQs</h1>
-        <button
-          onClick={() => {
-            setShowAddModal(true);
-          }}
-          className="flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Nova FAQ
-        </button>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-100">
-          {error}
-        </div>
-      )}
-
-      {/* Lista de FAQs */}
-      <div className="grid gap-4">
-        {faqs.map((faq) => (
-          <div
-            key={faq.id}
-            className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+    <div className="min-h-screen bg-gradient-to-b from-purple-900 via-purple-700 to-blue-500">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <Image
+              src="/logo/logobranco.png"
+              alt="Be2AI Logo"
+              width={120}
+              height={40}
+              className="w-auto h-auto"
+            />
+            <h1 className="text-2xl font-bold text-white">Gerenciar FAQs</h1>
+          </div>
+          <button
+            onClick={() => {
+              setEditingFaq(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white hover:bg-white/20 transition-colors rounded"
           >
-            <div className="p-4">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm px-2 py-1 bg-white/10 rounded-lg text-white/70">
-                      {faq.category}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    {faq.question}
-                  </h3>
-                  <p className="text-white/70">
-                    {faq.answer}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedFaq(faq);
-                      setShowEditModal(true);
-                    }}
-                    className="p-2 text-white/70 hover:text-white"
-                  >
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteFaq(faq.id)}
-                    className="p-2 text-white/70 hover:text-white"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
+            <Plus className="w-5 h-5" />
+            Nova FAQ
+          </button>
+        </div>
+
+        {/* Categorias */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 whitespace-nowrap rounded transition-colors ${
+                selectedCategory === category
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="faqs">
+            {(provided: DroppableProvided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="space-y-3"
+              >
+                {filteredFaqs.map((faq, index) => (
+                  <Draggable key={faq.id} draggableId={faq.id} index={index}>
+                    {(provided: DraggableProvided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div
+                            {...provided.dragHandleProps}
+                            className="text-white/40 hover:text-white/60 cursor-grab pt-1"
+                          >
+                            <GripVertical className="w-5 h-5" />
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="text-white font-medium mb-2">
+                              {faq.question}
+                            </div>
+                            <div className="text-white/80 text-sm">
+                              {faq.answer}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDuplicate(faq)}
+                              className="text-white/60 hover:text-white transition-colors"
+                              title="Duplicar FAQ"
+                            >
+                              <Copy className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingFaq(faq);
+                                setShowForm(true);
+                              }}
+                              className="text-white/60 hover:text-white transition-colors"
+                              title="Editar FAQ"
+                            >
+                              <Pencil className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(faq.id)}
+                              className="text-white/60 hover:text-white transition-colors"
+                              title="Excluir FAQ"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+
+        {/* Modal de Edição/Criação */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-lg w-full max-w-2xl">
+              <h2 className="text-xl font-semibold text-white mb-6">
+                {editingFaq ? 'Editar FAQ' : 'Nova FAQ'}
+              </h2>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Categoria
+                  </label>
+                  <select
+                    name="category"
+                    defaultValue={editingFaq?.category || selectedCategory}
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 text-white rounded focus:outline-none focus:border-white/20"
+                    required
+                  >
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Pergunta
+                  </label>
+                  <input
+                    type="text"
+                    name="question"
+                    defaultValue={editingFaq?.question || ''}
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 text-white rounded focus:outline-none focus:border-white/20"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Resposta
+                  </label>
+                  <textarea
+                    name="answer"
+                    defaultValue={editingFaq?.answer || ''}
+                    rows={4}
+                    className="w-full px-4 py-2 bg-white/5 border border-white/10 text-white rounded focus:outline-none focus:border-white/20 resize-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingFaq(null);
+                    }}
+                    className="px-4 py-2 text-white/70 hover:text-white transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-white/10 text-white hover:bg-white/20 transition-colors rounded"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        ))}
+        )}
       </div>
-
-      <Modal
-        show={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Adicionar FAQ"
-        onSubmit={handleAddFaq}
-      />
-
-      <Modal
-        show={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedFaq(null);
-        }}
-        title="Editar FAQ"
-        onSubmit={handleEditFaq}
-        initialData={selectedFaq ? {
-          category: selectedFaq.category,
-          question: selectedFaq.question,
-          answer: selectedFaq.answer
-        } : undefined}
-      />
     </div>
   );
 } 

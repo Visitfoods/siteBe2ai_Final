@@ -1,8 +1,11 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
+// Verificar se estamos no lado do cliente
+const isBrowser = typeof window !== 'undefined';
+
+// Configuração do Firebase
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,19 +15,21 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Verificar se as variáveis de ambiente estão definidas
-if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
-  console.error('Variáveis de ambiente do Firebase não configuradas corretamente');
-  throw new Error('Configuração do Firebase incompleta');
+// Verificar se as variáveis estão definidas apenas no lado do cliente
+if (isBrowser) {
+  console.log('Firebase Config:', {
+    apiKey: !!firebaseConfig.apiKey,
+    authDomain: !!firebaseConfig.authDomain,
+    projectId: !!firebaseConfig.projectId,
+    storageBucket: !!firebaseConfig.storageBucket,
+    messagingSenderId: !!firebaseConfig.messagingSenderId,
+    appId: !!firebaseConfig.appId
+  });
 }
 
-// Inicializar Firebase apenas uma vez
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-console.log('Firebase inicializado');
+// Inicializar Firebase
+let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+let auth = getAuth(app);
+let db = getFirestore(app);
 
-// Inicializar serviços
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-export { auth, db, storage }; 
+export { auth, db }; 

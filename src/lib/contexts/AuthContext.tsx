@@ -1,15 +1,9 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '@/lib/firebase/firebase';
-import { 
-  User, 
-  signInWithEmailAndPassword, 
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  browserLocalPersistence,
-  setPersistence
-} from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { auth } from '../firebase/firebase';
+import { User, signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -18,96 +12,77 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const ALLOWED_EMAIL = 'be2aigeral@gmail.com';
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signIn: async () => {},
-  signOut: async () => {},
-});
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    console.log('Iniciando AuthProvider');
-    
-    // Configurar persistência local
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => console.log('Persistência local configurada'))
-      .catch(error => console.error('Erro ao configurar persistência:', error));
-
-    // Observar mudanças no estado de autenticação
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('Estado de autenticação alterado:', user?.email);
-      
-      // Validar se o usuário tem permissão
-      if (user && user.email !== ALLOWED_EMAIL) {
-        console.log('Usuário não autorizado, fazendo logout');
-        firebaseSignOut(auth);
-        return;
-      }
-      
+    console.log('Configurando listener de autenticação...');
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      console.log('Estado de autenticação mudou:', user ? 'Usuário logado' : 'Usuário não logado');
       setUser(user);
       setLoading(false);
     });
 
-    return () => {
-      console.log('Limpando AuthProvider');
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<void> => {
+  const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true);
+      console.log('Tentando fazer login com email:', email);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login bem-sucedido:', userCredential.user.uid);
       
-      // Validar email
-      if (email !== ALLOWED_EMAIL) {
-        throw new Error('Email não autorizado');
-      }
-
-      // Tentar login
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login bem-sucedido:', result.user.email);
+      // Definir cookie de sessão
+      document.cookie = `session=${await userCredential.user.getIdToken()}; path=/`;
       
+      console.log('Redirecionando para o dashboard...');
+      router.push('/admin/dashboard');
     } catch (error: any) {
       console.error('Erro no login:', error);
-      if (error.code === 'auth/wrong-password') {
-        throw new Error('Senha incorreta');
-      } else if (error.code === 'auth/user-not-found') {
-        throw new Error('Usuário não encontrado');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('Email inválido');
-      } else {
-        throw new Error(error.message || 'Erro ao fazer login');
-      }
-    } finally {
-      setLoading(false);
+      throw error;
     }
+  };
+
+  const handleRedirect = async () => {
+    await router.push('/admin/login');
+    window.location.reload();
   };
 
   const signOut = async () => {
     try {
-      setLoading(true);
+      console.log('Fazendo logout...');
       await firebaseSignOut(auth);
-      console.log('Logout realizado');
+      
+      // Remover cookie de sessão
+      document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+      
+      console.log('Logout bem-sucedido, redirecionando para login...');
+      // Forçar redirecionamento direto
+      window.location.assign('/admin/login');
     } catch (error: any) {
       console.error('Erro no logout:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
+  const value = {
+    user,
+    loading,
+    signIn,
+    signOut
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
-}
-
-export const useAuth = () => useContext(AuthContext);
-
+} 

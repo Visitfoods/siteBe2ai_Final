@@ -1,114 +1,151 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase/firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { MessageSquare, CheckCircle, Circle } from 'lucide-react';
-
-interface Message {
-  id: string;
-  nome: string;
-  email: string;
-  mensagem: string;
-  dataEnvio: string;
-  status: string;
-}
+import { Message, getMessages, markMessageAsRead, deleteMessage } from '@/lib/firebase/firebaseUtils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Eye, Trash2, Mail, MailOpen } from 'lucide-react';
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
   useEffect(() => {
-    const messagesRef = collection(db, 'messages');
-    const q = query(messagesRef, orderBy('dataEnvio', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Message[];
-      
-      setMessages(messagesData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    loadMessages();
   }, []);
 
-  const handleMarkAsRead = async (messageId: string) => {
+  const loadMessages = async () => {
     try {
-      const messageRef = doc(db, 'messages', messageId);
-      await updateDoc(messageRef, {
-        status: 'lida'
-      });
+      const loadedMessages = await getMessages();
+      setMessages(loadedMessages);
     } catch (error) {
-      console.error('Erro ao atualizar status:', error);
+      console.error('Erro ao carregar mensagens:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markMessageAsRead(id);
+      await loadMessages();
+    } catch (error) {
+      console.error('Erro ao marcar mensagem como lida:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta mensagem?')) return;
+    
+    try {
+      await deleteMessage(id);
+      await loadMessages();
+      if (selectedMessage?.id === id) {
+        setSelectedMessage(null);
+      }
+    } catch (error) {
+      console.error('Erro ao excluir mensagem:', error);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-      </div>
-    );
+    return <div className="text-white">Carregando...</div>;
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-8">
-        <MessageSquare className="w-6 h-6 text-white/80" />
-        <h1 className="text-2xl font-semibold text-white">Mensagens</h1>
-      </div>
+    <div className="flex h-[calc(100vh-8rem)]">
+      {/* Lista de Mensagens */}
+      <div className="w-1/3 border-r border-white/10 overflow-y-auto">
+        <h1 className="text-2xl font-bold text-white p-6 border-b border-white/10">
+          Mensagens
+        </h1>
 
-      <div className="grid gap-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-white/60 py-8">
-            Nenhuma mensagem encontrada.
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div 
-              key={message.id} 
-              className={`bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 space-y-4 transition-colors ${
-                message.status === 'não lida' ? 'bg-white/10' : ''
+        <div className="divide-y divide-white/10">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              onClick={() => setSelectedMessage(message)}
+              className={`p-4 cursor-pointer transition-colors ${
+                selectedMessage?.id === message.id
+                  ? 'bg-white/10'
+                  : 'hover:bg-white/5'
               }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-medium text-white">{message.nome}</h3>
-                  <p className="text-sm text-white/60">{message.email}</p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-white font-medium">{message.nome}</div>
+                  <div className="text-white/60 text-sm">{message.email}</div>
                 </div>
-                <button
-                  onClick={() => handleMarkAsRead(message.id)}
-                  className="text-white/60 hover:text-white transition-colors"
-                >
+                <div className="flex items-center gap-2">
                   {message.status === 'não lida' ? (
-                    <Circle className="w-5 h-5" />
+                    <Mail className="w-4 h-4 text-white" />
                   ) : (
-                    <CheckCircle className="w-5 h-5" />
+                    <MailOpen className="w-4 h-4 text-white/60" />
                   )}
-                </button>
+                </div>
               </div>
-
-              <p className="text-white/80 whitespace-pre-wrap">{message.mensagem}</p>
-
-              <div className="flex items-center justify-between text-sm text-white/40">
-                <span>
-                  {new Date(message.dataEnvio).toLocaleDateString('pt-PT', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </span>
-                <span className={message.status === 'não lida' ? 'text-white/60' : ''}>
-                  {message.status}
-                </span>
+              <div className="mt-2 text-sm text-white/80 line-clamp-2">
+                {message.mensagem}
+              </div>
+              <div className="mt-2 text-xs text-white/60">
+                {format(new Date(message.dataEnvio), "d 'de' MMMM 'às' HH:mm", {
+                  locale: ptBR,
+                })}
               </div>
             </div>
-          ))
+          ))}
+        </div>
+      </div>
+
+      {/* Visualização da Mensagem */}
+      <div className="flex-1 p-6">
+        {selectedMessage ? (
+          <div>
+            <div className="flex items-start justify-between mb-8">
+              <div>
+                <h2 className="text-xl font-semibold text-white mb-2">
+                  {selectedMessage.nome}
+                </h2>
+                <div className="text-white/60">{selectedMessage.email}</div>
+                <div className="text-sm text-white/60 mt-1">
+                  {format(
+                    new Date(selectedMessage.dataEnvio),
+                    "d 'de' MMMM 'de' yyyy 'às' HH:mm",
+                    { locale: ptBR }
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {selectedMessage.status === 'não lida' && (
+                  <button
+                    onClick={() => handleMarkAsRead(selectedMessage.id)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/5 text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Marcar como lida
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(selectedMessage.id)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/5 text-white hover:bg-white/10 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 p-6 rounded-lg">
+              <div className="text-white whitespace-pre-wrap">
+                {selectedMessage.mensagem}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-white/40">
+            Selecione uma mensagem para visualizar
+          </div>
         )}
       </div>
     </div>

@@ -1,62 +1,22 @@
 'use client';
 
-import { Video, MessageSquareText, MessageSquare } from 'lucide-react';
-import Link from 'next/link';
+import { useAuth } from '@/lib/hooks/useAuth';
 
-export default function Dashboard() {
-  const cards = [
-    {
-      title: 'Vídeo',
-      value: 'Gerir',
-      icon: Video,
-      href: '/admin/dashboard/video',
-      color: 'from-purple-500/20 to-purple-600/20',
-    },
-    {
-      title: 'FAQs',
-      value: 'Gerir',
-      icon: MessageSquareText,
-      href: '/admin/dashboard/faqs',
-      color: 'from-pink-500/20 to-pink-600/20',
-    },
-    {
-      title: 'Mensagens',
-      value: 'Gerir',
-      icon: MessageSquare,
-      href: '/admin/dashboard/messages',
-      color: 'from-blue-500/20 to-blue-600/20',
-    },
-  ];
+export default function DashboardPage() {
+  const { user } = useAuth();
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card) => (
-          <Link
-            key={card.title}
-            href={card.href}
-            className="block group"
-          >
-            <div className={`p-6 rounded-2xl bg-gradient-to-br ${card.color} backdrop-blur-lg border border-white/20 transition-transform hover:scale-105`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-lg font-medium text-white/70">{card.title}</p>
-                  <p className="text-3xl font-bold text-white mt-2">{card.value}</p>
-                </div>
-                <card.icon className="w-12 h-12 text-white/50" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      <div className="mt-12">
-        <h2 className="text-xl font-semibold text-white mb-4">Bem-vindo ao Backoffice</h2>
-        <p className="text-white/70">
-          Aqui pode alterar o vídeo principal, editar as FAQs e gerir as mensagens do site.
-          Selecione uma das opções acima para começar.
+    <div>
+      <h1 className="text-2xl font-bold text-white mb-6">
+        Bem-vindo ao Painel Administrativo
+      </h1>
+      
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-lg">
+        <p className="text-white/80">
+          Você está logado como: <span className="text-white">{user?.email}</span>
+        </p>
+        <p className="text-white/60 mt-4">
+          Use o menu lateral para navegar entre as seções do painel administrativo.
         </p>
       </div>
     </div>

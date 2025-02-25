@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Esconder elementos de debug do Cursor IDE */
+#cursor-container,
+div[id*="cursor"],
+div[class*="cursor-debug"],
+.cursor-debug-icon,
+div[style*="z-index: 2147483647"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Esconder scrollbar mas manter funcionalidade */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 @keyframes gradient {
   0% {
     background-position: 0% 50%;
@@ -222,6 +243,15 @@ body {
   min-height: 100vh;
   color: white;
   overflow-x: hidden;
+  background: radial-gradient(
+    circle at 100% 0%,
+    rgb(147, 51, 234) 0%,
+    rgba(88, 28, 135, 1) 30%,
+    rgba(15, 3, 35, 1) 60%,
+    rgb(3, 0, 20) 100%
+  );
+  background-size: 200% 200%;
+  animation: gradientAnimation 8s ease infinite;
 }
 
 .custom-padding-left {
@@ -324,7 +354,66 @@ body {
 }
 
 /* Media queries para vídeo responsivo */
+@media (max-width: 1366px) {
+  .services-section .flex {
+    flex-direction: column;
+  }
+
+  .services-section .w-1/2 {
+    width: 100%;
+  }
+
+  .services-section .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    aspect-ratio: 1/1;
+  }
+}
+
 @media (max-width: 1024px) {
+  .services-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .services-section .flex {
+    flex-direction: column;
+  }
+
+  .services-section .w-1/2 {
+    width: 100%;
+  }
+
+  .services-section video {
+    height: 100vh;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .services-section .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  /* Ajuste para inverter a ordem em tablets */
+  .services-section .order-last {
+    order: -1 !important;
+  }
+
+  .services-section .order-first {
+    order: 1 !important;
+  }
+
   .fixed.left-0.top-0.h-screen {
     position: relative !important;
     width: 100% !important;
@@ -396,9 +485,10 @@ body {
   }
 
   .service-card {
-    width: 320px !important;
-    height: 400px !important;
-    padding: 2rem !important;
+    height: 218px !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
   }
 
   /* Ajustes para a nova grelha em tablet */
@@ -438,146 +528,110 @@ body {
 }
 
 @media (max-width: 768px) {
-  .fixed.left-0.top-0.h-screen {
-    position: relative !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100vh !important;
-  }
-  
-  .absolute.inset-0.overflow-hidden.bg-black\/40 {
-    border-radius: 0 !important;
-  }
-  
-  video.absolute.inset-0.w-full.h-full.object-cover {
-    transform: none !important;
+  .services-section .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
   }
 
-  /* Ajustes para o conteúdo de texto */
-  .relative.z-20 {
-    margin-top: 8rem !important;
+  .services-section video {
+    height: 60vh;
   }
 
-  .w-full.h-full.custom-padding-left.pr-12 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
   }
 
-  .h-full.w-\[65\%\].ml-auto {
-    width: 100% !important;
-    margin-left: 0 !important;
+  .px-12 {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
-  .text-7xl {
-    font-size: 2.5rem !important;
-    line-height: 1.1 !important;
+  .py-24 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
   }
 
-  /* Ajustes para o logo */
-  .w-full.pt-6 {
-    position: fixed !important;
-    top: 0 !important;
-    right: 0 !important;
-    width: auto !important;
-    z-index: 50 !important;
-    padding: 0.75rem !important;
-  }
-
-  .w-full.custom-padding-left.pr-12 {
-    padding: 0 !important;
-    display: flex !important;
-    justify-content: flex-end !important;
-  }
-
-  .w-40.h-32 {
-    width: 100px !important;
-    height: 80px !important;
-    margin: 0 !important;
-  }
-
-  /* Ajustes para os cartões de serviços */
-  .services-container {
-    height: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .services-wrapper {
-    height: auto !important;
-    padding: 1rem 0 !important;
+  .text-4xl {
+    font-size: 2rem;
   }
 
   .service-card {
-    width: 280px !important;
-    height: 380px !important;
-    padding: 1.5rem !important;
+    aspect-ratio: 16/10;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
   }
 
-  /* Ajustes para a nova grelha em mobile */
-  .grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 0.75rem !important;
-  }
-
-  .service-icon {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-  }
-
-  /* Ajustes para o formulário em smartphones */
-  form.w-full.max-w-4xl {
-    padding: 1rem !important;
-  }
-
-  form.w-full.max-w-4xl .grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
-  }
-
-  form input,
-  form textarea {
-    font-size: 1rem !important;
-    padding: 0.75rem 1.25rem !important;
-  }
-
-  form button {
-    font-size: 1rem !important;
-    height: 3.5rem !important;
+  /* Ajustes para o formulário flutuante */
+  .fixed.top-1/2.left-1/2.w-[400px] {
+    width: 90% !important;
+    max-width: 400px;
   }
 }
 
 @media (max-width: 640px) {
-  /* Ajustes para a nova grelha em mobile */
-  .grid {
+  .services-section .grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
-    padding: 0 2rem !important;
-    max-width: 400px !important;
+    padding: 0 1rem !important;
+  }
+
+  .services-section video {
+    height: 100vh !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+
+  .services-section .w-1/2:first-child {
+    min-height: 100vh !important;
+  }
+
+  .service-card {
+    width: 100% !important;
+    max-width: 280px !important;
     margin: 0 auto !important;
+    height: 290px !important;
+    padding: 0.75rem !important;
   }
 
   .service-icon {
-    width: 3rem !important;
-    height: 3rem !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
   }
 
-  /* Ajustes para o título dos serviços */
   .service-title {
-    font-size: 1.125rem !important;
-    line-height: 1.4 !important;
+    font-size: 0.875rem !important;
   }
 
-  /* Ajuste do espaçamento entre os cards */
-  .service-card {
-    margin-bottom: 1rem !important;
-    aspect-ratio: 16/10 !important;
+  .text-3xl {
+    font-size: 1.75rem !important;
   }
 
-  /* Ajuste do serviço personalizado */
-  .mt-6.sm\:mt-8.flex.justify-center {
-    padding: 0 2rem !important;
-    max-width: 400px !important;
-    margin: 1rem auto 0 !important;
+  .text-4xl {
+    font-size: 2rem !important;
+  }
+
+  /* Ajustes para FAQs */
+  .faq-categories-container {
+    padding: 0.5rem;
+  }
+
+  .faq-category-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Ajustes para o footer */
+  .footer-grid {
+    gap: 2rem;
+  }
+
+  .footer-grid > div {
+    align-items: center;
+    text-align: center;
   }
 }
 
@@ -674,7 +728,10 @@ form textarea {
   }
 
   .service-card {
-    aspect-ratio: 1/1;
+    height: 218px !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
   }
 }
 
@@ -721,23 +778,32 @@ form textarea {
 
 @media (max-width: 640px) {
   .services-section .grid {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-    margin: 0 auto;
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+    padding: 0 1rem !important;
   }
 
   .services-section video {
-    min-height: 70vh;
-    object-position: center 35%;
+    height: 100vh !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+
+  .services-section .w-1/2:first-child {
+    min-height: 100vh !important;
   }
 
   .service-card {
-    aspect-ratio: 16/9;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
+    aspect-ratio: 16/10;
   }
 
   .px-8 {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
   }
 
   /* Ajustes para FAQs */
@@ -764,11 +830,17 @@ form textarea {
 /* Ajustes para telas muito pequenas */
 @media (max-width: 380px) {
   .service-card {
-    aspect-ratio: 1/1;
+    max-width: 100% !important;
+    height: 218px !important;
+    padding: 1rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.5rem !important;
   }
 
   .text-4xl {
-    font-size: 1.75rem;
+    font-size: 1.75rem !important;
   }
 
   .fixed.top-1/2.left-1/2.w-[400px] {
@@ -789,26 +861,192 @@ form textarea {
   max-width: 100%;
 }
 
-/* Ajustes para a barra de cookies */
-@media (max-width: 768px) {
-  .cookie-bar {
-    padding: 1rem;
-  }
-
-  .cookie-bar p {
-    font-size: 0.875rem;
-  }
-
-  .cookie-bar button {
-    width: 100%;
-    margin-top: 1rem;
-  }
-}
-
 /* Ajustes para o botão flutuante */
 @media (max-width: 640px) {
   .fixed.bottom-6.right-6 {
     bottom: 1rem;
     right: 1rem;
+  }
+}
+
+/* Estilos específicos para iPad Pro e tablets maiores */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .services-section {
+    min-height: 100vh;
+  }
+
+  .services-section .flex {
+    flex-direction: column;
+  }
+
+  /* Ajuste para inverter a ordem em tablets */
+  .services-section .order-last {
+    order: -1 !important;
+  }
+
+  .services-section .order-first {
+    order: 1 !important;
+  }
+
+  .services-section .w-1/2 {
+    width: 100%;
+  }
+
+  .services-section video {
+    height: 100vh;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .services-section .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 4/3;
+    padding: 1.5rem !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .service-icon {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+}
+
+/* Ajustes específicos para iPad Pro em modo retrato */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: portrait) {
+  .services-section {
+    min-height: 100vh;
+  }
+
+  .services-section .flex {
+    flex-direction: column-reverse;
+  }
+
+  .services-section .w-1/2 {
+    width: 100%;
+    min-height: 50vh;
+  }
+
+  .services-section video {
+    height: 100vh;
+    width: 100%;
+    object-fit: cover;
+    position: relative;
+  }
+
+  .services-section .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1/1;
+    padding: 1.5rem !important;
+  }
+}
+
+/* Ajustes específicos para iPad Pro em modo paisagem */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .services-section {
+    min-height: 100vh;
+  }
+
+  .services-section .flex {
+    flex-direction: row;
+  }
+
+  .services-section .w-1/2 {
+    width: 50%;
+    min-height: 100vh;
+  }
+
+  .services-section video {
+    height: 100vh;
+    width: 100%;
+    object-fit: cover;
+    position: relative;
+  }
+
+  .services-section .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1/1;
+    padding: 1.5rem !important;
+  }
+}
+
+/* Estilo do SVG */
+.svg-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  animation: float 6s ease-in-out infinite;
+}
+
+.svg-path {
+  stroke: #6900ff;
+  stroke-width: 6;
+  fill: white;
+  filter: drop-shadow(0 0 3px rgba(105, 0, 255, 0.5));
+}
+
+.svg-container:hover {
+  animation-play-state: paused;
+}
+
+@keyframes gradientBg {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
   }
 }
