@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Message, getMessages, markMessageAsRead, deleteMessage } from '@/lib/firebase/firebaseUtils';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { pt } from 'date-fns/locale/pt';
 import { Eye, Trash2, Mail, MailOpen } from 'lucide-react';
 
 export default function MessagesPage() {
@@ -90,7 +90,7 @@ export default function MessagesPage() {
               </div>
               <div className="mt-2 text-xs text-white/60">
                 {format(new Date(message.dataEnvio), "d 'de' MMMM 'às' HH:mm", {
-                  locale: ptBR,
+                  locale: pt,
                 })}
               </div>
             </div>
@@ -112,7 +112,7 @@ export default function MessagesPage() {
                   {format(
                     new Date(selectedMessage.dataEnvio),
                     "d 'de' MMMM 'de' yyyy 'às' HH:mm",
-                    { locale: ptBR }
+                    { locale: pt }
                   )}
                 </div>
               </div>

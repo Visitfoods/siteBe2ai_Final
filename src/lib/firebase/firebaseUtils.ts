@@ -65,6 +65,7 @@ export interface Service {
   title: string;
   description: string;
   order: number;
+  icon?: string;
   updatedAt?: any;
 }
 
@@ -409,3 +410,10 @@ export const createInitialServices = async () => {
     return false;
   }
 }; 
+
+// Generic helper to add a document to any collection
+export async function addDocument<T extends Record<string, any>>(collectionName: string, data: T) {
+  const ref = collection(db, collectionName);
+  const result = await addDoc(ref, data);
+  return result.id;
+} 

@@ -359,7 +359,7 @@ body {
     flex-direction: column;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 100%;
   }
 
@@ -386,7 +386,7 @@ body {
     flex-direction: column;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 100%;
   }
 
@@ -565,7 +565,7 @@ body {
   }
 
   /* Ajustes para o formulário flutuante */
-  .fixed.top-1/2.left-1/2.w-[400px] {
+  .fixed.top-1\/2.left-1\/2.w-\[400px\] {
     width: 90% !important;
     max-width: 400px;
   }
@@ -585,7 +585,7 @@ body {
     object-position: center !important;
   }
 
-  .services-section .w-1/2:first-child {
+  .services-section .w-1\/2:first-child {
     min-height: 100vh !important;
   }
 
@@ -694,7 +694,7 @@ form textarea {
     flex-direction: column;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 100%;
   }
 
@@ -770,7 +770,7 @@ form textarea {
   }
 
   /* Ajustes para o formulário flutuante */
-  .fixed.top-1/2.left-1/2.w-[400px] {
+  .fixed.top-1\/2.left-1\/2.w-\[400px\] {
     width: 90% !important;
     max-width: 400px;
   }
@@ -790,7 +790,7 @@ form textarea {
     object-position: center !important;
   }
 
-  .services-section .w-1/2:first-child {
+  .services-section .w-1\/2:first-child {
     min-height: 100vh !important;
   }
 
@@ -843,7 +843,7 @@ form textarea {
     font-size: 1.75rem !important;
   }
 
-  .fixed.top-1/2.left-1/2.w-[400px] {
+  .fixed.top-1\/2.left-1\/2.w-\[400px\] {
     width: 95% !important;
   }
 }
@@ -888,7 +888,7 @@ form textarea {
     order: 1 !important;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 100%;
   }
 
@@ -933,7 +933,7 @@ form textarea {
     flex-direction: column-reverse;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 100%;
     min-height: 50vh;
   }
@@ -971,7 +971,7 @@ form textarea {
     flex-direction: row;
   }
 
-  .services-section .w-1/2 {
+  .services-section .w-1\/2 {
     width: 50%;
     min-height: 100vh;
   }
