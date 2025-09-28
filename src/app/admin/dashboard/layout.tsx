@@ -20,7 +20,7 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    router.push('/login');
+    router.push('/admin/login');
     return null;
   }
 
