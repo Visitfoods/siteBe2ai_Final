@@ -47,5 +47,5 @@ firebase-debug.*.log
 # Firebase config
 src/lib/firebase/firebase.ts
 
-# Videos
-/public/Video/*
+# Videos (comentado para permitir upload)
+# /public/Video/*
