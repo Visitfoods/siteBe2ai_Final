@@ -83,8 +83,8 @@ export default function Home() {
   });
   const [isInView, setIsInView] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [heroVideo, setHeroVideo] = useState('/Video/Sofia-Holder_Horizontal_WEB.mp4');
-  const [secondaryVideo, setSecondaryVideo] = useState('/Video/VideoApresentacao-Draft02_WEB-High-legendas.mp4');
+  const [heroVideo, setHeroVideo] = useState('/Video/Be2AIvideo.mp4');
+  const [secondaryVideo, setSecondaryVideo] = useState('/Video/Be2AIvideo.mp4');
   const [loading, setLoading] = useState(true);
   const [videoKey, setVideoKey] = useState(0);
   const [selectedService, setSelectedService] = useState<{
