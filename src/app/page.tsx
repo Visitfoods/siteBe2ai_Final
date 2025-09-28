@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Facebook, Instagram, Linkedin, Music, ChevronLeft, ChevronRight, UserCircle2, Map, Bot, Ghost, MessageSquareMore, HeadphonesIcon, Camera, Video, Code2, Wrench, ChevronDown, Handshake, MessageCircle, X, Send, Settings, Palette, MapPin, Clock, type LucideIcon } from "lucide-react";
 import Footer from './components/Footer';
-import { getHomeVideos, getServices, type Service as FirebaseService } from '@/lib/firebase/firebaseUtils';
+import { getServices, type Service as FirebaseService } from '@/lib/firebase/firebaseUtils';
 import ServicePopup from './components/ServicePopup';
 
 export const dynamic = 'force-dynamic';
@@ -83,8 +83,8 @@ export default function Home() {
   });
   const [isInView, setIsInView] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [heroVideo, setHeroVideo] = useState('/Video/Be2AIvideo.mp4');
-  const [secondaryVideo, setSecondaryVideo] = useState('/Video/Be2AIvideo.mp4');
+  const [heroVideo, setHeroVideo] = useState('/Video/Sofia-Holder_Horizontal_WEB.mp4');
+  const [secondaryVideo, setSecondaryVideo] = useState('/Video/VideoApresentacao-Draft02_WEB-High-legendas.mp4');
   const [loading, setLoading] = useState(true);
   const [videoKey, setVideoKey] = useState(0);
   const [selectedService, setSelectedService] = useState<{
@@ -185,19 +185,12 @@ export default function Home() {
 
     const loadInitialData = async () => {
       try {
-        const [faqsData, videosData, servicesData] = await Promise.all([
+        const [faqsData, servicesData] = await Promise.all([
           fetchFaqs(),
-          getHomeVideos(),
           getServices()
         ]);
 
         if (!mounted) return;
-
-        if (videosData) {
-          setHeroVideo(videosData.heroVideo);
-          setSecondaryVideo(videosData.secondaryVideo);
-          setVideoKey(prev => prev + 1);
-        }
 
         if (servicesData) {
           setServicesData(servicesData);
@@ -219,36 +212,7 @@ export default function Home() {
   }, []);
 
   // Atualizar vídeos periodicamente com cleanup adequado
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId: NodeJS.Timeout;
-
-    const loadVideos = async () => {
-      try {
-        const data = await getHomeVideos();
-        if (!mounted) return;
-
-        if (data) {
-          setHeroVideo(data.heroVideo);
-          setSecondaryVideo(data.secondaryVideo);
-          setVideoKey(prev => prev + 1);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar vídeos:', error);
-      } finally {
-        if (mounted) {
-          timeoutId = setTimeout(loadVideos, 30000);
-        }
-      }
-    };
-
-    loadVideos();
-
-    return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-    };
-  }, []);
+  // Vídeos agora são estáticos - não precisamos de carregar do Firebase
 
   // Otimizar fetchFaqs para usar cache
   const fetchFaqs = async () => {
