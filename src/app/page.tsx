@@ -83,8 +83,8 @@ export default function Home() {
   });
   const [isInView, setIsInView] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [heroVideo, setHeroVideo] = useState('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
-  const [secondaryVideo, setSecondaryVideo] = useState('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4');
+  const [heroVideo, setHeroVideo] = useState('/Video/Be2AIvideo.mp4');
+  const [secondaryVideo, setSecondaryVideo] = useState('/Video/Be2AIvideo.mp4');
   const [loading, setLoading] = useState(true);
   const [videoKey, setVideoKey] = useState(0);
   const [selectedService, setSelectedService] = useState<{
