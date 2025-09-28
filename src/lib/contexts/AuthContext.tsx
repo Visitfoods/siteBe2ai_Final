@@ -25,18 +25,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     console.log('Configurando listener de autenticação...');
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth?.onAuthStateChanged((user: User | null) => {
       console.log('Estado de autenticação mudou:', user ? 'Usuário logado' : 'Usuário não logado');
       setUser(user);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe?.();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Tentando fazer login com email:', email);
+      if (!auth) throw new Error('Firebase não está configurado');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Login bem-sucedido:', userCredential.user.uid);
       
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       console.log('Fazendo logout...');
+      if (!auth) throw new Error('Firebase não está configurado');
       await firebaseSignOut(auth);
       
       // Remover cookie de sessão

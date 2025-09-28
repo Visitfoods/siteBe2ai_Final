@@ -15,6 +15,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// Verificar se todas as variáveis necessárias estão definidas
+const isFirebaseConfigValid = Object.values(firebaseConfig).every(value => value !== undefined && value !== '');
+
 // Verificar se as variáveis estão definidas apenas no lado do cliente
 if (isBrowser) {
   console.log('Firebase Config:', {
@@ -23,13 +26,26 @@ if (isBrowser) {
     projectId: !!firebaseConfig.projectId,
     storageBucket: !!firebaseConfig.storageBucket,
     messagingSenderId: !!firebaseConfig.messagingSenderId,
-    appId: !!firebaseConfig.appId
+    appId: !!firebaseConfig.appId,
+    isValid: isFirebaseConfigValid
   });
 }
 
-// Inicializar Firebase
-let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-let auth = getAuth(app);
-let db = getFirestore(app);
+// Inicializar Firebase apenas se a configuração for válida
+let app: any = null;
+let auth: any = null;
+let db: any = null;
+
+if (isFirebaseConfigValid) {
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error('Erro ao inicializar Firebase:', error);
+  }
+} else {
+  console.warn('Configuração do Firebase incompleta. Verifique as variáveis de ambiente.');
+}
 
 export { auth, db }; 

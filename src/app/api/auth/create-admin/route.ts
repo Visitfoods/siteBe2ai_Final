@@ -4,6 +4,14 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export async function POST(request: Request) {
   try {
+    // Verificar se o Firebase está configurado
+    if (!auth) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Firebase não está configurado. Verifique as variáveis de ambiente.' 
+      }, { status: 500 });
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
