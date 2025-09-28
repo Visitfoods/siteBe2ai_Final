@@ -23,30 +23,30 @@ export default function PortfolioPage() {
       id: 'clones-digitais',
       title: 'Clones Digitais',
       image: '/fotoscategoriasportefolio/Clonedigital.png',
-      videos: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4']
+      videos: ['/videosportefolio/SommelierVirtual_Prev02 ( Humano ).mp4']
     },
     {
       id: 'mascotes-digitais',
       title: 'Mascotes Digitais',
       image: '/fotoscategoriasportefolio/Mascote Digital.png',
       videos: [
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+        '/videosportefolio/Apresentação Gelatino.mp4',
+        '/videosportefolio/Afonso Henriques_legendado_Versão Final.mp4'
       ]
     },
     {
       id: 'virtual-guide',
       title: 'Virtual Guide',
       image: '/fotoscategoriasportefolio/Virtual Guide.png',
-      videos: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4']
+      videos: ['/videosportefolio/demo_012.MP4']
     },
     {
       id: 'redes-sociais',
       title: 'Conteúdos para as Redes Sociais',
       image: '/fotoscategoriasportefolio/Conteudo Redes.webp',
       videos: [
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4'
+        '/videosportefolio/Talhos Almerinda_Spa_v2.mp4',
+        '/videosportefolio/zona-construcao-bonecos.mp4'
       ]
     }
   ];
