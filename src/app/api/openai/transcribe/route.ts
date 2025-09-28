@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import OpenAI from "openai";
 
-const openai = new OpenAI();
+// Inicializar OpenAI apenas se a API key estiver configurada
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+}) : null;
 
 export async function POST(req: Request) {
+  // Verificar se OpenAI está configurado
+  if (!openai) {
+    return NextResponse.json(
+      { error: "OpenAI API key não está configurada" },
+      { status: 500 }
+    );
+  }
+
   const body = await req.json();
 
   const base64Audio = body.audio;
@@ -33,6 +44,9 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error processing audio:", error);
-    return NextResponse.error();
+    return NextResponse.json(
+      { error: "Erro ao processar áudio" },
+      { status: 500 }
+    );
   }
 }

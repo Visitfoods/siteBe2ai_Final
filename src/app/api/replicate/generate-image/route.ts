@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
-const replicate = new Replicate({
+// Inicializar Replicate apenas se o token estiver configurado
+const replicate = process.env.REPLICATE_API_TOKEN ? new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
-});
+}) : null;
 
 export async function POST(request: Request) {
-  if (!process.env.REPLICATE_API_TOKEN) {
-    throw new Error(
-      "The REPLICATE_API_TOKEN environment variable is not set. See README.md for instructions on how to set it."
+  if (!replicate) {
+    return NextResponse.json(
+      { error: "REPLICATE_API_TOKEN não está configurado" },
+      { status: 500 }
     );
   }
 
